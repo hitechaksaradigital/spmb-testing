@@ -1,5 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { useEffect } from 'react';
+import { authService } from './services/supabaseService';
+import { isSupabaseConfigured } from './lib/supabase';
+import { useStore } from './store/useStore';
 
 // Layouts
 import DashboardLayout from './components/Layout/DashboardLayout';
@@ -32,6 +36,22 @@ import LaporanPage from './pages/Kepsek/Laporan';
 import PengaturanPage from './pages/Kepsek/Pengaturan';
 
 function App() {
+  // Check for existing Supabase session on app load
+  useEffect(() => {
+    const checkSession = async () => {
+      if (isSupabaseConfigured()) {
+        const session = await authService.getSession();
+        if (session?.user) {
+          const user = await authService.getCurrentUser();
+          if (user) {
+            useStore.setState({ currentUser: user as any, isAuthenticated: true });
+          }
+        }
+      }
+    };
+    checkSession();
+  }, []);
+
   return (
     <BrowserRouter>
       <Toaster 

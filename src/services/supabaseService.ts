@@ -8,6 +8,7 @@
 // ============================================
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { hashPassword, verifyPassword } from '../lib/password';
 
 // ============================================
 // AUTH SERVICE
@@ -19,6 +20,8 @@ export const authService = {
     if (!isSupabaseConfigured()) {
       throw new Error('Supabase not configured');
     }
+
+    const passwordHash = await hashPassword(password);
 
     // 1. Create auth user di Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -40,7 +43,7 @@ export const authService = {
         name,
         email,
         phone,
-        password_hash: password,
+        password_hash: passwordHash,
         role: 'siswa'
       })
       .select()
@@ -71,23 +74,47 @@ export const authService = {
       throw new Error('Supabase not configured');
     }
 
+    // Try Supabase Auth first (for registered users via registration)
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
-    if (error) throw error;
+    // If Supabase Auth succeeds, get user data
+    if (!error && data.user) {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
 
-    // Get user data from our users table
+      if (!userError && userData) {
+        return { session: data.session, user: userData };
+      }
+    }
+
+    // Fallback: Direct login for admin/kepsek via users table
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', data.user.id)
+      .eq('email', email)
       .single();
 
-    if (userError) throw userError;
+    if (userError || !userData) {
+      throw new Error('Email atau password salah!');
+    }
 
-    return { session: data.session, user: userData };
+    // Verify password hash
+    const isValid = await verifyPassword(password, userData.password_hash);
+    if (!isValid) {
+      throw new Error('Email atau password salah!');
+    }
+
+    // Create a mock session for direct login
+    return { 
+      session: { user: { id: userData.id, email: userData.email } } as any, 
+      user: userData 
+    };
   },
 
   // Logout

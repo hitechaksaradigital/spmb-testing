@@ -36,7 +36,13 @@ export function useAuth() {
     try {
       if (isSupabaseConfigured()) {
         const result = await authService.login(email, password);
-        // Update local store with user data
+        // Update local store with user data from Supabase
+        if (result.user) {
+          useStore.setState({
+            currentUser: result.user as any,
+            isAuthenticated: true
+          });
+        }
         return { success: true, user: result.user };
       } else {
         // Fallback to local mock
@@ -58,7 +64,18 @@ export function useAuth() {
     try {
       if (isSupabaseConfigured()) {
         const result = await authService.register(name, email, phone, password);
-        return { success: true, noPendaftaran: result.noPendaftaran };
+        // After successful registration, update store with user data
+        if (result.user) {
+          useStore.setState({
+            currentUser: result.user as any,
+            isAuthenticated: true
+          });
+        }
+        return { 
+          success: true, 
+          noPendaftaran: result.noPendaftaran,
+          message: `Registrasi berhasil! No. Pendaftaran: ${result.noPendaftaran}`
+        };
       } else {
         // Fallback to local mock
         const result = store.register(name, email, phone, password);

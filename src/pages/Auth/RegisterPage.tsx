@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useStore } from '../../store/useStore';
+import { useAuth } from '../../hooks/useSupabase';
 import Navbar from '../../components/Layout/Navbar';
 import Input from '../../components/UI/Input';
 import Button from '../../components/UI/Button';
@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { register } = useStore();
+  const { register } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -37,13 +37,10 @@ export default function RegisterPage() {
 
     setIsLoading(true);
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    const result = register(formData.name, formData.email, formData.phone, formData.password);
+    const result = await register(formData.name, formData.email, formData.phone, formData.password);
 
     if (result.success) {
-      toast.success(result.message, { duration: 5000 });
+      toast.success(result.message || 'Registrasi berhasil!', { duration: 5000 });
       navigate('/siswa/dashboard');
     } else {
       setError(result.message);

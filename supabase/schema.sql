@@ -8,6 +8,70 @@
 -- 3. Paste seluruh kode ini
 -- 4. Klik "Run"
 --
+-- Untuk clean install, jalankan DROP terlebih dahulu
+-- ============================================
+
+-- ============================================
+-- DROP EXISTING (Untuk clean install)
+-- ============================================
+
+DROP VIEW IF EXISTS v_pendaftar_lengkap;
+DROP VIEW IF EXISTS v_dashboard_stats;
+DROP TRIGGER IF EXISTS update_konfigurasi_updated_at ON konfigurasi;
+DROP TRIGGER IF EXISTS update_pendaftar_berkas_updated_at ON pendaftar_berkas;
+DROP TRIGGER IF EXISTS update_pendaftar_profil_updated_at ON pendaftar_profil;
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+DROP FUNCTION IF EXISTS generate_no_pendaftaran();
+DROP FUNCTION IF EXISTS update_updated_at_column();
+DROP FUNCTION IF EXISTS is_admin_user();
+DROP FUNCTION IF EXISTS is_kepsek_user();
+DROP POLICY IF EXISTS "Anyone can view users for login" ON users;
+DROP POLICY IF EXISTS "Kepsek can manage konfigurasi" ON konfigurasi;
+DROP POLICY IF EXISTS "Admin can view all results" ON ujian_hasil;
+DROP POLICY IF EXISTS "Admin can manage soal" ON ujian_soal;
+DROP POLICY IF EXISTS "Admin can update payments" ON pembayaran;
+DROP POLICY IF EXISTS "Admin can view all payments" ON pembayaran;
+DROP POLICY IF EXISTS "Admin can update berkas status" ON pendaftar_berkas;
+DROP POLICY IF EXISTS "Admin can view all berkas" ON pendaftar_berkas;
+DROP POLICY IF EXISTS "Admin can update pendaftar status" ON pendaftar_profil;
+DROP POLICY IF EXISTS "Admin can view all pendaftar" ON pendaftar_profil;
+DROP POLICY IF EXISTS "Admin can view all users" ON users;
+DROP POLICY IF EXISTS "Anyone can view konfigurasi" ON konfigurasi;
+DROP POLICY IF EXISTS "Users can view own results" ON ujian_hasil;
+DROP POLICY IF EXISTS "Anyone can view soal" ON ujian_soal;
+DROP POLICY IF EXISTS "Users can create own payments" ON pembayaran;
+DROP POLICY IF EXISTS "Users can view own payments" ON pembayaran;
+DROP POLICY IF EXISTS "Pendaftar can manage own berkas" ON pendaftar_berkas;
+DROP POLICY IF EXISTS "Pendaftar can update own profile" ON pendaftar_profil;
+DROP POLICY IF EXISTS "Pendaftar can view own profile" ON pendaftar_profil;
+DROP POLICY IF EXISTS "Users can update own profile" ON users;
+DROP POLICY IF EXISTS "Users can view own profile" ON users;
+DROP POLICY IF EXISTS "Anyone can view users for login" ON users;
+DROP POLICY IF EXISTS "Users can insert own profile" ON users;
+DROP POLICY IF EXISTS "Pendaftar can insert own profile" ON pendaftar_profil;
+DROP POLICY IF EXISTS "Users can insert own results" ON ujian_hasil;
+DROP TABLE IF EXISTS ujian_hasil;
+DROP TABLE IF EXISTS pendaftar_berkas;
+DROP TABLE IF EXISTS pembayaran;
+DROP TABLE IF EXISTS pendaftar_profil;
+DROP TABLE IF EXISTS ujian_soal;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS konfigurasi;
+DROP EXTENSION IF EXISTS "uuid-ossp";
+DROP TYPE IF EXISTS jawaban_opsi;
+DROP TYPE IF EXISTS kategori_soal;
+DROP TYPE IF EXISTS jenis_kelamin;
+DROP TYPE IF EXISTS status_form;
+DROP TYPE IF EXISTS jenis_berkas;
+DROP TYPE IF EXISTS jenis_pembayaran;
+DROP TYPE IF EXISTS status_kelulusan;
+DROP TYPE IF EXISTS status_verifikasi;
+DROP TYPE IF EXISTS status_pembayaran;
+DROP TYPE IF EXISTS user_role;
+DROP EXTENSION IF EXISTS "uuid-ossp";
+
+-- ============================================
+-- CREATE NEW SCHEMA
 -- ============================================
 
 -- Enable UUID extension
@@ -250,6 +314,30 @@ CREATE TRIGGER update_konfigurasi_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- Function untuk cek apakah user adalah admin (bypass RLS)
+CREATE OR REPLACE FUNCTION is_admin_user()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM users 
+    WHERE id = auth.uid() 
+    AND role IN ('panitia', 'kepala_sekolah')
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function untuk cek apakah user adalah kepsek (bypass RLS)
+CREATE OR REPLACE FUNCTION is_kepsek_user()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM users 
+    WHERE id = auth.uid() 
+    AND role = 'kepala_sekolah'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- ============================================
 -- FUNCTION: Generate Nomor Pendaftaran
 -- ============================================
@@ -291,8 +379,15 @@ ALTER TABLE konfigurasi ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own profile" ON users
     FOR SELECT USING (auth.uid()::text = id::text);
 
+-- Policy: Allow login query (for authentication)
+CREATE POLICY "Anyone can view users for login" ON users
+    FOR SELECT USING (true);
+
 CREATE POLICY "Users can update own profile" ON users
     FOR UPDATE USING (auth.uid()::text = id::text);
+
+CREATE POLICY "Users can insert own profile" ON users
+    FOR INSERT WITH CHECK (true);
 
 -- Policy: Pendaftar dapat melihat & update profil sendiri
 CREATE POLICY "Pendaftar can view own profile" ON pendaftar_profil
@@ -300,6 +395,9 @@ CREATE POLICY "Pendaftar can view own profile" ON pendaftar_profil
 
 CREATE POLICY "Pendaftar can update own profile" ON pendaftar_profil
     FOR UPDATE USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Pendaftar can insert own profile" ON pendaftar_profil
+    FOR INSERT WITH CHECK (true);
 
 -- Policy: Pendaftar dapat mengelola berkas sendiri
 CREATE POLICY "Pendaftar can manage own berkas" ON pendaftar_berkas
@@ -324,6 +422,9 @@ CREATE POLICY "Anyone can view soal" ON ujian_soal
 CREATE POLICY "Users can view own results" ON ujian_hasil
     FOR SELECT USING (auth.uid()::text = user_id::text);
 
+CREATE POLICY "Users can insert own results" ON ujian_hasil
+    FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
+
 -- Policy: Konfigurasi dapat dilihat semua
 CREATE POLICY "Anyone can view konfigurasi" ON konfigurasi
     FOR SELECT USING (true);
@@ -332,104 +433,44 @@ CREATE POLICY "Anyone can view konfigurasi" ON konfigurasi
 -- ADMIN POLICIES (untuk panitia dan kepsek)
 -- ============================================
 
--- Admin bisa melihat semua users
+-- Admin bisa melihat semua users (bypass RLS untuk admin)
 CREATE POLICY "Admin can view all users" ON users
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM users u 
-            WHERE u.id::text = auth.uid()::text 
-            AND u.role IN ('panitia', 'kepala_sekolah')
-        )
-    );
+    FOR SELECT USING (is_admin_user());
 
 -- Admin bisa melihat semua pendaftar
 CREATE POLICY "Admin can view all pendaftar" ON pendaftar_profil
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM users u 
-            WHERE u.id::text = auth.uid()::text 
-            AND u.role IN ('panitia', 'kepala_sekolah')
-        )
-    );
+    FOR SELECT USING (is_admin_user());
 
 -- Admin bisa update status kelulusan
 CREATE POLICY "Admin can update pendaftar status" ON pendaftar_profil
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM users u 
-            WHERE u.id::text = auth.uid()::text 
-            AND u.role IN ('panitia', 'kepala_sekolah')
-        )
-    );
+    FOR UPDATE USING (is_admin_user());
 
 -- Admin bisa melihat semua berkas
 CREATE POLICY "Admin can view all berkas" ON pendaftar_berkas
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM users u 
-            WHERE u.id::text = auth.uid()::text 
-            AND u.role IN ('panitia', 'kepala_sekolah')
-        )
-    );
+    FOR SELECT USING (is_admin_user());
 
 -- Admin bisa update status berkas
 CREATE POLICY "Admin can update berkas status" ON pendaftar_berkas
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM users u 
-            WHERE u.id::text = auth.uid()::text 
-            AND u.role IN ('panitia', 'kepala_sekolah')
-        )
-    );
+    FOR UPDATE USING (is_admin_user());
 
 -- Admin bisa melihat & verify semua pembayaran
 CREATE POLICY "Admin can view all payments" ON pembayaran
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM users u 
-            WHERE u.id::text = auth.uid()::text 
-            AND u.role IN ('panitia', 'kepala_sekolah')
-        )
-    );
+    FOR SELECT USING (is_admin_user());
 
 CREATE POLICY "Admin can update payments" ON pembayaran
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM users u 
-            WHERE u.id::text = auth.uid()::text 
-            AND u.role IN ('panitia', 'kepala_sekolah')
-        )
-    );
+    FOR UPDATE USING (is_admin_user());
 
 -- Admin bisa manage soal
 CREATE POLICY "Admin can manage soal" ON ujian_soal
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM users u 
-            WHERE u.id::text = auth.uid()::text 
-            AND u.role = 'panitia'
-        )
-    );
+    FOR ALL USING (is_admin_user());
 
 -- Admin bisa melihat semua hasil
 CREATE POLICY "Admin can view all results" ON ujian_hasil
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM users u 
-            WHERE u.id::text = auth.uid()::text 
-            AND u.role IN ('panitia', 'kepala_sekolah')
-        )
-    );
+    FOR SELECT USING (is_admin_user());
 
 -- Kepsek bisa update konfigurasi
 CREATE POLICY "Kepsek can manage konfigurasi" ON konfigurasi
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM users u 
-            WHERE u.id::text = auth.uid()::text 
-            AND u.role = 'kepala_sekolah'
-        )
-    );
+    FOR ALL USING (is_kepsek_user());
 
 -- ============================================
 -- SAMPLE DATA (untuk testing)
@@ -459,10 +500,27 @@ INSERT INTO konfigurasi (
 );
 
 -- Insert sample admin users (password: admin123)
--- Note: Di production, gunakan hash yang proper
+-- Note: Password sudah di-hash dengan bcrypt
 INSERT INTO users (name, email, phone, password_hash, role) VALUES
-('Panitia PPDB', 'panitia@sekolah.sch.id', '081234567890', 'panitia123', 'panitia'),
-('Dr. H. Ahmad Sudrajat, M.Pd', 'kepsek@sekolah.sch.id', '081234567891', 'kepsek123', 'kepala_sekolah');
+('Panitia PPDB', 'panitia@sekolah.sch.id', '081234567890', '$2b$10$Ouq50PJnrTY0yytKCMlAl.nzwbGuEABmRB6dnORd6aqrtAiCFhQk.', 'panitia'),
+('Dr. H. Ahmad Sudrajat, M.Pd', 'kepsek@sekolah.sch.id', '081234567891', '$2b$10$Ouq50PJnrTY0yytKCMlAl.nzwbGuEABmRB6dnORd6aqrtAiCFhQk.', 'kepala_sekolah'),
+('Budi Santoso', 'budi@gmail.com', '081234567892', '$2b$10$VvR1wCZF8uO03SqXA4TjVuKDrc5KHp4o4ib8ensO5O7IV6umqbZQy', 'siswa');
+
+-- Insert sample pendaftar profil for Budi (demo siswa)
+INSERT INTO pendaftar_profil (
+  user_id, no_pendaftaran, nik, nama_lengkap, tempat_lahir, tanggal_lahir,
+  jenis_kelamin, agama, alamat, provinsi, kota, kode_pos,
+  nama_ayah, pekerjaan_ayah, telepon_ayah, nama_ibu, pekerjaan_ibu, telepon_ibu,
+  sekolah_asal, alamat_sekolah_asal, npsn, tahun_lulus, nilai_rata_rata,
+  status_form, status_kelulusan
+) VALUES (
+  (SELECT id FROM users WHERE email = 'budi@gmail.com' LIMIT 1),
+  'PPDB-2025-0001', '3201012345670001', 'Budi Santoso', 'Jakarta', '2010-05-15',
+  'L', 'Islam', 'Jl. Merdeka No. 123', 'DKI Jakarta', 'Jakarta Selatan', '12345',
+  'Ahmad Santoso', 'Wiraswasta', '081234567893', 'Siti Aminah', 'Ibu Rumah Tangga', '081234567894',
+  'SD Negeri 01 Jakarta', 'Jl. Pendidikan No. 1', '12345678', '2025', 85.5,
+  'lengkap', 'belum_diproses'
+);
 
 -- Insert sample soal ujian
 INSERT INTO ujian_soal (nomor_soal, kategori, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, jawaban_benar, created_by) VALUES

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useSupabase';
 import { useStore } from '../../store/useStore';
 import Navbar from '../../components/Layout/Navbar';
 import Input from '../../components/UI/Input';
@@ -9,7 +10,7 @@ import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, currentUser } = useStore();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -17,44 +18,29 @@ export default function LoginPage() {
     password: ''
   });
 
-  // Redirect if already logged in
-  if (currentUser) {
-    switch (currentUser.role) {
-      case 'siswa':
-        navigate('/siswa/dashboard');
-        break;
-      case 'panitia':
-        navigate('/admin/dashboard');
-        break;
-      case 'kepala_sekolah':
-        navigate('/kepsek/dashboard');
-        break;
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    const result = login(formData.email, formData.password);
+    const result = await login(formData.email, formData.password);
 
     if (result.success) {
-      toast.success(result.message);
+      toast.success('Login berhasil!');
+      // Get user from store after successful login
       const user = useStore.getState().currentUser;
-      switch (user?.role) {
-        case 'siswa':
-          navigate('/siswa/dashboard');
-          break;
-        case 'panitia':
-          navigate('/admin/dashboard');
-          break;
-        case 'kepala_sekolah':
-          navigate('/kepsek/dashboard');
-          break;
+      if (user) {
+        switch (user.role) {
+          case 'siswa':
+            navigate('/siswa/dashboard');
+            break;
+          case 'panitia':
+            navigate('/admin/dashboard');
+            break;
+          case 'kepala_sekolah':
+            navigate('/kepsek/dashboard');
+            break;
+        }
       }
     } else {
       setError(result.message);
@@ -130,27 +116,27 @@ export default function LoginPage() {
             <div className="mt-8 pt-6 border-t border-gray-200">
               <p className="text-sm text-gray-500 text-center mb-3">Akun Demo:</p>
               <div className="space-y-2 text-xs text-gray-600">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ email: 'budi@gmail.com', password: 'siswa123' })}
-                  className="w-full p-2 bg-gray-50 hover:bg-gray-100 rounded text-left"
-                >
-                  <strong>Siswa:</strong> budi@gmail.com / siswa123
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ email: 'panitia@sekolah.sch.id', password: 'panitia123' })}
-                  className="w-full p-2 bg-gray-50 hover:bg-gray-100 rounded text-left"
-                >
-                  <strong>Panitia:</strong> panitia@sekolah.sch.id / panitia123
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ email: 'kepsek@sekolah.sch.id', password: 'kepsek123' })}
-                  className="w-full p-2 bg-gray-50 hover:bg-gray-100 rounded text-left"
-                >
-                  <strong>Kepsek:</strong> kepsek@sekolah.sch.id / kepsek123
-                </button>
+<button
+                   type="button"
+                   onClick={() => setFormData({ email: 'budi@gmail.com', password: 'siswa123' })}
+                   className="w-full p-2 bg-gray-50 hover:bg-gray-100 rounded text-left"
+                 >
+                   <strong>Siswa:</strong> budi@gmail.com / siswa123
+                 </button>
+                 <button
+                   type="button"
+                   onClick={() => setFormData({ email: 'panitia@sekolah.sch.id', password: 'admin123' })}
+                   className="w-full p-2 bg-gray-50 hover:bg-gray-100 rounded text-left"
+                 >
+                   <strong>Panitia:</strong> panitia@sekolah.sch.id / admin123
+                 </button>
+                 <button
+                   type="button"
+                   onClick={() => setFormData({ email: 'kepsek@sekolah.sch.id', password: 'admin123' })}
+                   className="w-full p-2 bg-gray-50 hover:bg-gray-100 rounded text-left"
+                 >
+                   <strong>Kepsek:</strong> kepsek@sekolah.sch.id / admin123
+                 </button>
               </div>
             </div>
           </div>
