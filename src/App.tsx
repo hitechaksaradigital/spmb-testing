@@ -28,6 +28,8 @@ import HasilUjianPage from './pages/Admin/HasilUjian';
 
 // Kepsek Pages
 import KepsekDashboard from './pages/Kepsek/Dashboard';
+import LaporanPage from './pages/Kepsek/Laporan';
+import PengaturanPage from './pages/Kepsek/Pengaturan';
 
 function App() {
   return (
@@ -89,8 +91,8 @@ function App() {
         <Route element={<DashboardLayout allowedRoles={['kepala_sekolah']} />}>
           <Route path="/kepsek/dashboard" element={<KepsekDashboard />} />
           <Route path="/kepsek/statistik" element={<KepsekDashboard />} />
-          <Route path="/kepsek/laporan" element={<KepsekDashboard />} />
-          <Route path="/kepsek/pengaturan" element={<KepsekDashboard />} />
+          <Route path="/kepsek/laporan" element={<LaporanPage />} />
+          <Route path="/kepsek/pengaturan" element={<PengaturanPage />} />
         </Route>
 
         {/* Catch all */}
