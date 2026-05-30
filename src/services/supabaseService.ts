@@ -177,6 +177,7 @@ export const pendaftarService = {
 
   // Get all pendaftar (admin only)
   async getAllPendaftar() {
+    console.log('[pendaftarService] Fetching pendaftar_profil...');
     const { data, error } = await supabase
       .from('pendaftar_profil')
       .select(`
@@ -185,6 +186,8 @@ export const pendaftarService = {
       `)
       .order('created_at', { ascending: false });
 
+    console.log('[pendaftarService] pendaftar_profil response - data:', data, 'error:', error);
+
     if (error) throw error;
 
     // Fetch pembayaran separately
@@ -192,6 +195,8 @@ export const pendaftarService = {
       .from('pembayaran')
       .select('*')
       .order('created_at', { ascending: false });
+
+    console.log('[pendaftarService] pembayaran response - data:', pembayaranData);
 
     // Merge pembayaran into pendaftar
     if (data && pembayaranData) {

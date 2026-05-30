@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
-import { useDashboardStats } from '../../hooks/useSupabase';
+import { useDashboardStats, useAllPendaftar } from '../../hooks/useSupabase';
 import Card from '../../components/UI/Card';
 import Badge from '../../components/UI/Badge';
 import {
@@ -16,12 +16,11 @@ import {
 
 export default function AdminDashboard() {
   const { konfigurasi } = useStore();
-  const { stats, loading } = useDashboardStats();
-  const { getAllPendaftar } = useStore();
-  const allPendaftar = getAllPendaftar();
+  const { stats, loading: statsLoading } = useDashboardStats();
+  const { pendaftar: allPendaftar, loading: pendaftarLoading } = useAllPendaftar();
   const recentPendaftar = allPendaftar.slice(-5).reverse();
 
-  if (loading || !stats) {
+  if (statsLoading || pendaftarLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -225,7 +224,7 @@ export default function AdminDashboard() {
                 const hasPaidFormulir = p.pembayaran?.some(
                   pay => pay.jenisPembayaran === 'formulir' && pay.status === 'success'
                 );
-                
+
                 return (
                   <tr key={p.id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4 font-mono text-sm">{p.noPendaftaran}</td>

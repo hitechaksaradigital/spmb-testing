@@ -20,6 +20,7 @@ import type { PendaftarProfil, User as UserType, Pembayaran } from '../../types'
 
 export default function PendaftarPage() {
   const { pendaftar: allPendaftar, loading, refresh } = useAllPendaftar();
+  console.log('[PendaftarPage] allPendaftar:', allPendaftar, 'loading:', loading);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedPendaftar, setSelectedPendaftar] = useState<any | null>(null);

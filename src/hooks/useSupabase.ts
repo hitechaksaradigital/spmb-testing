@@ -166,9 +166,12 @@ export function useAllPendaftar() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchPendaftar = useCallback(async () => {
+    console.log('[useAllPendaftar] Hook called, Supabase configured:', isSupabaseConfigured());
     try {
       if (isSupabaseConfigured()) {
+        console.log('[useAllPendaftar] Fetching from Supabase...');
         const data = await pendaftarService.getAllPendaftar();
+        console.log('[useAllPendaftar] Raw data:', data);
         const transformed = (data || []).map((p: any) => ({
           id: p.id,
           userId: p.user_id,
@@ -219,12 +222,16 @@ export function useAllPendaftar() {
             createdAt: pay.created_at
           }))
         }));
+        console.log('[useAllPendaftar] Transformed data:', transformed);
         setPendaftar(transformed);
       } else {
+        console.log('[useAllPendaftar] Using local store fallback');
         const data = store.getAllPendaftar ? store.getAllPendaftar() : [];
+        console.log('[useAllPendedor] Store data:', data);
         setPendaftar(data);
       }
     } catch (err: any) {
+      console.error('[useAllPendedor] Error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
