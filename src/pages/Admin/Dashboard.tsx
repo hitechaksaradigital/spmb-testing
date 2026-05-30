@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
+import { useDashboardStats } from '../../hooks/useSupabase';
 import Card from '../../components/UI/Card';
 import Badge from '../../components/UI/Badge';
 import {
@@ -14,9 +15,19 @@ import {
 } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const { getDashboardStats, getAllPendaftar, konfigurasi } = useStore();
-  const stats = getDashboardStats();
-  const recentPendaftar = getAllPendaftar().slice(-5).reverse();
+  const { konfigurasi } = useStore();
+  const { stats, loading } = useDashboardStats();
+  const { getAllPendaftar } = useStore();
+  const allPendaftar = getAllPendaftar();
+  const recentPendaftar = allPendaftar.slice(-5).reverse();
+
+  if (loading || !stats) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const formatCurrency = (num: number) => {
     return new Intl.NumberFormat('id-ID', {

@@ -156,6 +156,89 @@ export function usePendaftar(userId?: string) {
 }
 
 // ============================================
+// ALL PENDAFTAR HOOK (Admin)
+// ============================================
+
+export function useAllPendaftar() {
+  const store = useStore();
+  const [pendaftar, setPendaftar] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPendaftar = useCallback(async () => {
+    try {
+      if (isSupabaseConfigured()) {
+        const data = await pendaftarService.getAllPendaftar();
+        const transformed = (data || []).map((p: any) => ({
+          id: p.id,
+          userId: p.user_id,
+          noPendaftaran: p.no_pendaftaran,
+          nik: p.nik,
+          namaLengkap: p.nama_lengkap,
+          tempatLahir: p.tempat_lahir,
+          tanggalLahir: p.tanggal_lahir,
+          jenisKelamin: p.jenis_kelamin,
+          agama: p.agama,
+          alamat: p.alamat,
+          provinsi: p.provinsi,
+          kota: p.kota,
+          kodePos: p.kode_pos,
+          namaAyah: p.nama_ayah,
+          pekerjaanAyah: p.pekerjaan_ayah,
+          teleponAyah: p.telepon_ayah,
+          namaIbu: p.nama_ibu,
+          pekerjaanIbu: p.pekerjaan_ibu,
+          teleponIbu: p.telepon_ibu,
+          sekolahAsal: p.sekolah_asal,
+          alamatSekolahAsal: p.alamat_sekolah_asal,
+          npsn: p.npsn,
+          tahunLulus: p.tahun_lulus,
+          nilaiRataRata: p.nilai_rata_rata,
+          statusForm: p.status_form,
+          statusKelulusan: p.status_kelulusan,
+          nilaiUjian: p.nilai_ujian,
+          createdAt: p.created_at,
+          updatedAt: p.updated_at,
+          user: p.user ? {
+            id: p.user.id,
+            name: p.user.name,
+            email: p.user.email,
+            phone: p.user.phone,
+            role: p.user.role
+          } : undefined,
+          pembayaran: (p.pembayaran || []).map((pay: any) => ({
+            id: pay.id,
+            userId: pay.user_id,
+            jenisPembayaran: pay.jenis_pembayaran,
+            jumlah: pay.jumlah,
+            status: pay.status,
+            buktiTransfer: pay.bukti_transfer,
+            tanggalBayar: pay.tanggal_bayar,
+            verifiedBy: pay.verified_by,
+            verifiedAt: pay.verified_at,
+            createdAt: pay.created_at
+          }))
+        }));
+        setPendaftar(transformed);
+      } else {
+        const data = store.getAllPendaftar ? store.getAllPendaftar() : [];
+        setPendaftar(data);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [store]);
+
+  useEffect(() => {
+    fetchPendaftar();
+  }, [fetchPendaftar]);
+
+return { pendaftar, loading, error, refresh: fetchPendaftar };
+}
+
+// ============================================
 // PEMBAYARAN HOOK
 // ============================================
 

@@ -181,11 +181,26 @@ export const pendaftarService = {
       .from('pendaftar_profil')
       .select(`
         *,
-        user:users(name, email, phone)
+        user:users(id, name, email, phone, role)
       `)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+
+    // Fetch pembayaran separately
+    const { data: pembayaranData } = await supabase
+      .from('pembayaran')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // Merge pembayaran into pendaftar
+    if (data && pembayaranData) {
+      return data.map(p => ({
+        ...p,
+        pembayaran: pembayaranData.filter(pay => pay.user_id === p.user_id)
+      }));
+    }
+
     return data;
   },
 

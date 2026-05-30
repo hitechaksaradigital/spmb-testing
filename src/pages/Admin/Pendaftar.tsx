@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useStore } from '../../store/useStore';
+import { useAllPendaftar } from '../../hooks/useSupabase';
 import Card from '../../components/UI/Card';
 import Badge from '../../components/UI/Badge';
 import Button from '../../components/UI/Button';
@@ -19,12 +19,10 @@ import {
 import type { PendaftarProfil, User as UserType, Pembayaran } from '../../types';
 
 export default function PendaftarPage() {
-  const { getAllPendaftar } = useStore();
+  const { pendaftar: allPendaftar, loading, refresh } = useAllPendaftar();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedPendaftar, setSelectedPendaftar] = useState<(PendaftarProfil & { user?: UserType; pembayaran?: Pembayaran[] }) | null>(null);
-
-  const allPendaftar = getAllPendaftar();
+  const [selectedPendaftar, setSelectedPendaftar] = useState<any | null>(null);
 
   const filteredPendaftar = allPendaftar.filter(p => {
     const matchSearch = 
