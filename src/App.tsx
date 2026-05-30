@@ -12,6 +12,7 @@ import DashboardLayout from './components/Layout/DashboardLayout';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
+import AuthCallback from './pages/Auth/AuthCallback';
 
 // Siswa Pages
 import SiswaDashboard from './pages/Siswa/Dashboard';
@@ -85,6 +86,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* Siswa Routes */}
         <Route element={<DashboardLayout allowedRoles={['siswa']} />}>

@@ -96,7 +96,22 @@ export function useAuth() {
     store.logout();
   }, [store]);
 
-  return { login, register, logout, loading, error };
+  const loginWithGoogle = useCallback(async () => {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured');
+    }
+
+    try {
+      await authService.loginWithGoogle();
+      // Note: This will redirect to Google, so code after this won't execute
+      return { success: true };
+    } catch (err: any) {
+      setError(err.message);
+      return { success: false, message: err.message };
+    }
+  }, []);
+
+  return { login, register, logout, loginWithGoogle, loading, error };
 }
 
 // ============================================

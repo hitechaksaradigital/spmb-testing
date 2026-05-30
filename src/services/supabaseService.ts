@@ -74,47 +74,104 @@ export const authService = {
       throw new Error('Supabase not configured');
     }
 
-    // Try Supabase Auth first (for registered users via registration)
+    // Login via Supabase Auth (for all users including admin)
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
-    // If Supabase Auth succeeds, get user data
-    if (!error && data.user) {
+    if (error) {
+      throw new Error(error.message || 'Email atau password salah!');
+    }
+
+    // If Supabase Auth succeeds, get user data from public.users
+    if (data.user) {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', data.user.id)
         .single();
 
-      if (!userError && userData) {
-        return { session: data.session, user: userData };
+      if (userError || !userData) {
+        throw new Error('User data tidak ditemukan!');
       }
+
+      return { session: data.session, user: userData };
     }
 
-    // Fallback: Direct login for admin/kepsek via users table
+    throw new Error('Login gagal!');
+  },
+
+  // Login with Google OAuth
+  async loginWithGoogle() {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase not configured');
+    }
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
+      }
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Google login failed!');
+    }
+
+    return data;
+  },
+
+  // Handle OAuth callback (call this on callback page)
+  async handleOAuthCallback() {
+    const { data: { session }, error } = await supabase.auth.getSession();
+
+    if (error || !session) {
+      throw new Error('OAuth callback failed!');
+    }
+
+    // Check if user exists in public.users
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('email', email)
+      .eq('id', session.user.id)
       .single();
 
     if (userError || !userData) {
-      throw new Error('Email atau password salah!');
+      // Create user record if doesn't exist (for new Google users)
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert({
+          id: session.user.id,
+          name: session.user.user_metadata?.full_name || session.user.email,
+          email: session.user.email,
+          phone: session.user.user_metadata?.phone || '',
+          password_hash: '', // No password for OAuth users
+          role: 'siswa'
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        throw new Error('Failed to create user profile!');
+      }
+
+      // Generate nomor pendaftaran
+      const { data: noPendaftaran } = await supabase.rpc('generate_no_pendaftaran');
+
+      // Create pendaftar profil
+      await supabase
+        .from('pendaftar_profil')
+        .insert({
+          user_id: session.user.id,
+          no_pendaftaran: noPendaftaran || `PPDB-${new Date().getFullYear()}-0001`,
+          nama_lengkap: session.user.user_metadata?.full_name || session.user.email
+        });
+
+      return { session, user: newUser };
     }
 
-    // Verify password hash
-    const isValid = await verifyPassword(password, userData.password_hash);
-    if (!isValid) {
-      throw new Error('Email atau password salah!');
-    }
-
-    // Create a mock session for direct login
-    return { 
-      session: { user: { id: userData.id, email: userData.email } } as any, 
-      user: userData 
-    };
+    return { session, user: userData };
   },
 
   // Logout

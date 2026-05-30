@@ -570,5 +570,27 @@ WHERE u.role = 'siswa'
 ORDER BY p.created_at DESC;
 
 -- ============================================
+-- SEED ADMIN USERS TO SUPABASE AUTH
+-- ============================================
+-- Run this to create admin users in Supabase Auth
+-- These users will be able to login via Supabase Auth and RLS will work properly
+--
+-- NOTE: The password encryption in auth.users must use bcrypt format
+-- For simplicity, use Supabase Dashboard > Authentication > Users to create admin users
+-- with matching IDs to public.users table
+--
+-- Admin users credentials:
+-- - Email: panitia@sekolah.sch.id / Password: panitia123
+-- - Email: kepsek@sekolah.sch.id / Password: kepsek123
+
+-- First, ensure admin users exist in public.users with consistent IDs
+UPDATE users SET id = '11111111-1111-1111-1111-111111111111' WHERE email = 'panitia@sekolah.sch.id';
+UPDATE users SET id = '22222222-2222-2222-2222-222222222222' WHERE email = 'kepsek@sekolah.sch.id';
+
+-- ============================================
+-- END OF SCHEMA
+-- ============================================
+
+-- ============================================
 -- END OF SCHEMA
 -- ============================================
